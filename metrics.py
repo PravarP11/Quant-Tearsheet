@@ -9,9 +9,9 @@ def cumulative_returns(log_returns: pd.Series) -> float:
 
     total_return = log_returns.sum()
 
-    cumulative_rturn = (np.exp(total_return)-1).astype(float)
+    cumulative_return = (np.exp(total_return)-1).astype(float)
 
-    return cumulative_rturn
+    return cumulative_return
 
 def cagr_returns(log_return: pd.Series) -> float:
     #Calculates Compound Annual Growth Rate (CAGR)
@@ -57,7 +57,7 @@ def downside_volatility(log_returns: pd.Series) -> float:
     return downside_vola
 
 def sharpe_ratio(cagr:float , annual_vola:float) -> float:
-    #Calculates Shrape ratio using ratio of CAGR and Annual Volatility
+    #Calculates Sharpe ratio using ratio of CAGR and Annual Volatility
 
     if annual_vola == 0 or np.isnan(annual_vola):
         return 0

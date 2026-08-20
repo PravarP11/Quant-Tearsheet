@@ -4,7 +4,7 @@ A **Streamlit-powered** quantitative strategy tearsheet that transforms raw NAV/
 
 ---
 
-## ✨ Features
+##  Features
 
 | Category | What You Get |
 |---|---|
@@ -18,7 +18,7 @@ A **Streamlit-powered** quantitative strategy tearsheet that transforms raw NAV/
 
 ---
 
-## 🖼️ Dashboard Preview
+##  Dashboard Preview
 
 Once launched, the app displays:
 
@@ -28,7 +28,7 @@ Once launched, the app displays:
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -56,7 +56,7 @@ The dashboard will open in your browser at `http://localhost:8501`.
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 Quant-Tearsheet/
@@ -71,7 +71,7 @@ Quant-Tearsheet/
 
 ---
 
-## 📋 Input Format
+##  Input Format
 
 The app expects a **two-column CSV** (with or without headers):
 
@@ -90,7 +90,7 @@ Date,NAV
 
 ---
 
-## 🧮 Metrics Reference
+##  Metrics Reference
 
 | Metric | Formula / Description |
 |---|---|
@@ -109,7 +109,7 @@ Date,NAV
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - **[Streamlit](https://streamlit.io/)** — interactive web UI  
 - **[Pandas](https://pandas.pydata.org/)** & **[NumPy](https://numpy.org/)** — data wrangling & numerics  
@@ -118,6 +118,6 @@ Date,NAV
 
 ---
 
-## 📄 License
+##  License
 
 This project is open-source and available under the [MIT License](LICENSE).
