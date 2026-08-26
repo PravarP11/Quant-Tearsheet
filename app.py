@@ -137,11 +137,26 @@ if returns is not None and not returns.empty:
             benchmark_returns=bench_returns,
             benchmark_name=benchmark_choice if enable_benchmark else "Benchmark"
         )
-        st.plotly_chart(fig_wealth, use_container_width=True)
+        st.plotly_chart(fig_wealth,
+      use_container_width=True,
+      config={
+          "scrollZoom": True,  # Allows scrolling/pinching directly on the Y-axis to scale vertically
+          "displayModeBar": True,
+          "doubleClick": "reset+autosize",  # Double clicking resets the zoom & scales
+          "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+      },
+      )
 
     with tab2:
         fig_drawdown = underwater_graph(strat_aligned)
-        st.plotly_chart(fig_drawdown, use_container_width=True)
+        st.plotly_chart(fig_drawdown,
+      use_container_width=True,
+      config={
+          "scrollZoom": True,
+          "displayModeBar": True,
+          "doubleClick": "reset+autosize",
+          "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+      },)
 
     with tab3:
         fig_dist = return_distribution_graph(strat_aligned)
