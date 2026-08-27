@@ -60,42 +60,73 @@ def data_pipeline(raw_text: str) -> pd.Series:
 BENCHMARK_TICKERS = {
     "Nifty 50": "^NSEI",
     "Sensex": "^BSESN",
+    "Bitcoin (Crypto Market Proxy)": "BTC-USD",
+    "Ethereum": "ETH-USD",
+    "Nasdaq Crypto Index (Hashdex ETF)": "HASH11.SA",
 }
 
-def fetch_benchmark_returns(start_date: str, end_date: str, benchmark_name: str = "Nifty 50") -> pd.Series:
-  #Fetches benchmark prices from Yahoo Finance and calculates daily log returns.
+def fetch_benchmark_returns(
+    start_date: str, end_date: str, benchmark_name: str = "Nifty 50"
+) -> pd.Series:
+  """Fetches benchmark prices from Yahoo Finance and calculates daily log returns."""
   ticker = BENCHMARK_TICKERS.get(benchmark_name, "^NSEI")
 
-  data = yf.download(ticker, start=start_date, end=end_date, progress=False)
+  # Add 5-day padding before start and after end to prevent lost data points & exclusive end truncation
+  dt_start = (pd.to_datetime(start_date) - pd.Timedelta(days=5)).strftime(
+      "%Y-%m-%d"
+  )
+  dt_end = (pd.to_datetime(end_date) + pd.Timedelta(days=5)).strftime("%Y-%m-%d")
 
-  if data.empty:
+  try:
+    data = yf.download(
+        ticker,
+        start=dt_start,
+        end=dt_end,
+        progress=False,
+        auto_adjust=True,
+    )
+
+    if data.empty:
+      return pd.Series(dtype=float, name="benchmark_returns")
+
+    prices = data["Close"] if "Close" in data else data["Adj Close"]
+
+    if isinstance(prices, pd.DataFrame):
+      prices = prices.iloc[:, 0]
+
+    prices = prices.dropna().astype(float)
+
+    bench_log_returns = np.log(prices).diff().dropna()
+    bench_log_returns.name = "benchmark_returns"
+
+    # Safely strip timezone whether the index is tz-aware or tz-naive
+    if bench_log_returns.index.tz is not None:
+      bench_log_returns.index = bench_log_returns.index.tz_convert(None)
+    else:
+      bench_log_returns.index = bench_log_returns.index.tz_localize(None)
+
+    # Normalize to date-only timestamps (00:00:00) to ensure clean inner joins
+    bench_log_returns.index = pd.to_datetime(bench_log_returns.index.date)
+
+    return bench_log_returns
+
+  except Exception:
     return pd.Series(dtype=float, name="benchmark_returns")
 
-  prices = data["Close"] if "Close" in data else data["Adj Close"]
+def align_strategy_and_benchmark(
+    strat_returns: pd.Series, bench_returns: pd.Series
+) -> tuple[pd.Series, pd.Series]:
+  """Aligns strategy and benchmark time series by matching mutual trading dates."""
+  strat_df = strat_returns.to_frame(name="Strategy")
+  bench_df = bench_returns.to_frame(name="Benchmark")
 
-  if isinstance(prices, pd.DataFrame):
-    prices = prices.iloc[:, 0]
+  # Standardize DatetimeIndex
+  strat_df.index = pd.to_datetime(strat_df.index).tz_localize(None)
+  bench_df.index = pd.to_datetime(bench_df.index).tz_localize(None)
 
-  prices = prices.dropna().astype(float)
-
-  bench_log_returns = np.log(prices).diff().dropna()
-  bench_log_returns.name = "benchmark_returns"
-
-  bench_log_returns.index = pd.to_datetime(bench_log_returns.index).tz_localize(
-      None
+  # Inner join to synchronize dates
+  combined = pd.merge(
+      strat_df, bench_df, left_index=True, right_index=True, how="inner"
   )
-  return bench_log_returns
 
-def align_strategy_and_benchmark(strategy_returns: pd.Series, benchmark_returns: pd.Series):
-  #Aligns strategy and benchmark series to ensure they share the exact same dates
-
-  strat_df = strategy_returns.to_frame(name="strategy")
-  strat_df.index = pd.to_datetime(strat_df.index).date
-
-  bench_df = benchmark_returns.to_frame(name="benchmark")
-  bench_df.index = pd.to_datetime(bench_df.index).date
-
-  merged = strat_df.join(bench_df, how="inner").dropna()
-  merged.index = pd.to_datetime(merged.index)
-
-  return merged["strategy"], merged["benchmark"] 
+  return combined["Strategy"], combined["Benchmark"]
