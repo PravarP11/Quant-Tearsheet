@@ -1,3 +1,4 @@
+from datetime import timedelta
 import pandas as pd
 import numpy as np
 import io
@@ -65,20 +66,23 @@ BENCHMARK_TICKERS = {
     "Nasdaq Crypto Index (Hashdex ETF)": "HASH11.SA",
 }
 
+@st.cache_data(ttl="6h", show_spinner=False)
 def fetch_benchmark_returns(
     start_date: str, end_date: str, benchmark_name: str = "Nifty 50"
 ) -> pd.Series:
-  """Fetches benchmark prices from Yahoo Finance and calculates daily log returns."""
+  """Fetches benchmark historical close prices with caching to prevent Yahoo Finance rate-limiting."""
   ticker = BENCHMARK_TICKERS.get(benchmark_name, "^NSEI")
 
-  # Add 5-day padding before start and after end to prevent lost data points & exclusive end truncation
-  dt_start = (pd.to_datetime(start_date) - pd.Timedelta(days=5)).strftime(
+  # Add 7-day padding around the date window
+  dt_start = (pd.to_datetime(start_date) - pd.Timedelta(days=7)).strftime(
       "%Y-%m-%d"
   )
-  dt_end = (pd.to_datetime(end_date) + pd.Timedelta(days=5)).strftime("%Y-%m-%d")
+  dt_end = (pd.to_datetime(end_date) + pd.Timedelta(days=7)).strftime(
+      "%Y-%m-%d"
+  )
 
   try:
-    data = yf.download(
+    df = yf.download(
         ticker,
         start=dt_start,
         end=dt_end,
@@ -86,31 +90,38 @@ def fetch_benchmark_returns(
         auto_adjust=True,
     )
 
-    if data.empty:
+    if df is None or df.empty:
       return pd.Series(dtype=float, name="benchmark_returns")
 
-    prices = data["Close"] if "Close" in data else data["Adj Close"]
-
-    if isinstance(prices, pd.DataFrame):
-      prices = prices.iloc[:, 0]
+    # Extract Close series reliably across single or multi-index columns
+    if isinstance(df.columns, pd.MultiIndex):
+      if "Close" in df.columns.levels[0]:
+        prices = df["Close"].iloc[:, 0]
+      else:
+        prices = df.iloc[:, 0]
+    else:
+      prices = df["Close"] if "Close" in df else df.iloc[:, 0]
 
     prices = prices.dropna().astype(float)
+    if len(prices) < 2:
+      return pd.Series(dtype=float, name="benchmark_returns")
 
-    bench_log_returns = np.log(prices).diff().dropna()
+    # Daily log returns
+    bench_log_returns = np.log(prices / prices.shift(1)).dropna()
     bench_log_returns.name = "benchmark_returns"
 
-    # Safely strip timezone whether the index is tz-aware or tz-naive
+    # Strip timezones
     if bench_log_returns.index.tz is not None:
       bench_log_returns.index = bench_log_returns.index.tz_convert(None)
     else:
       bench_log_returns.index = bench_log_returns.index.tz_localize(None)
 
-    # Normalize to date-only timestamps (00:00:00) to ensure clean inner joins
+    # Normalize to midnight timestamps
     bench_log_returns.index = pd.to_datetime(bench_log_returns.index.date)
-
     return bench_log_returns
 
-  except Exception:
+  except Exception as e:
+    print(f"Error downloading {benchmark_name}: {e}")
     return pd.Series(dtype=float, name="benchmark_returns")
 
 def align_strategy_and_benchmark(
