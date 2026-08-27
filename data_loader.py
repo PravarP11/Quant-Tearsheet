@@ -2,6 +2,7 @@ from datetime import timedelta
 import pandas as pd
 import numpy as np
 import io
+import streamlit as st
 import yfinance as yf
 
 
@@ -61,9 +62,9 @@ def data_pipeline(raw_text: str) -> pd.Series:
 BENCHMARK_TICKERS = {
     "Nifty 50": "^NSEI",
     "Sensex": "^BSESN",
-    "Bitcoin (Crypto Market Proxy)": "BTC-USD",
+    "Bitcoin": "BTC-USD",
     "Ethereum": "ETH-USD",
-    "Nasdaq Crypto Index (Hashdex ETF)": "HASH11.SA",
+    "Nasdaq Crypto Index": "HASH11.SA",
 }
 
 @st.cache_data(ttl="6h", show_spinner=False)

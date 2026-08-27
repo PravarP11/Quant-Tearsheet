@@ -61,9 +61,9 @@ with st.sidebar:
       options=[
           "Nifty 50",
           "Sensex",
-          "Bitcoin (Crypto Market Proxy)",
+          "Bitcoin",
           "Ethereum",
-          "Nasdaq Crypto Index (Hashdex ETF)",
+          "Nasdaq Crypto Index",
       ],
   )
 
