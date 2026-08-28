@@ -50,12 +50,15 @@ def calc_log_returns(df: pd.DataFrame) -> pd.Series:
     return log_returns
 
 def data_pipeline(raw_text: str) -> pd.Series:
-    #Combines the 3 functions
 
-    df = user_input(raw_text)
-    indexed_df = set_datetime_index(df)
-    log_returns = calc_log_returns(indexed_df)
-    return log_returns
+  df = user_input(raw_text)
+  indexed_df = set_datetime_index(df)
+
+  if len(indexed_df) > len(indexed_df.index.normalize().unique()):
+    indexed_df = indexed_df.resample("1D").last().dropna()
+
+  log_returns = calc_log_returns(indexed_df)
+  return log_returns
 
 
 

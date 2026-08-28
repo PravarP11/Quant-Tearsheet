@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
+from report_generator import generate_tearsheet_pdf
 
-# Custom modules
 from data_loader import (
     align_strategy_and_benchmark,
     data_pipeline,
@@ -19,14 +19,14 @@ from visuals import (
     underwater_graph,
 )
 
-# --- Page Configuration ---
+
 st.set_page_config(
     page_title="Quantitative Strategy Tearsheet",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# --- Sidebar Configuration ---
+
 with st.sidebar:
   st.header("Data Input")
 
@@ -67,7 +67,7 @@ with st.sidebar:
       ],
   )
 
-# --- Data Validation & Ingestion ---
+
 if not raw_csv_content.strip():
   st.info(
       "👈 Please upload a CSV file or paste raw CSV data in the sidebar to"
@@ -128,7 +128,7 @@ if returns is not None and not returns.empty:
   st.markdown("---")
 
   # --- Unified Strategy Metrics Generation ---
-  summary = generate_metrics_summary(strat_aligned)
+  summary = generate_metrics_summary(returns)
 
   # --- Top Row: Key Performance Indicators ---
   if enable_benchmark and bench_returns is not None:
@@ -169,7 +169,7 @@ if returns is not None and not returns.empty:
 
   with tab1:
     fig_wealth = cumulative_graph(
-        strategy_returns=strat_aligned,
+        strategy_returns=returns,
         benchmark_returns=bench_returns,
         benchmark_name=benchmark_choice if enable_benchmark else "Benchmark",
     )
@@ -185,7 +185,7 @@ if returns is not None and not returns.empty:
     )
 
   with tab2:
-    fig_drawdown = underwater_graph(strat_aligned)
+    fig_drawdown = underwater_graph(returns)
     st.plotly_chart(
         fig_drawdown,
         use_container_width=True,
@@ -267,3 +267,103 @@ if returns is not None and not returns.empty:
       table_rows, columns=["Metric Name", "Value", "Interpretation"]
   )
   st.dataframe(df_metrics, use_container_width=True, hide_index=True)
+
+  st.markdown("---")
+  st.subheader("📥 Export Performance Tearsheet")
+
+  export_rows = [
+      {
+          "Category": "Overview",
+          "Metric": "Analysis Period",
+          "Value": f"{start_date} to {end_date}",
+      },
+      {
+          "Category": "Overview",
+          "Metric": "Strategy Observations",
+          "Value": f"{len(returns)} data points",
+      },
+      {
+          "Category": "Returns",
+          "Metric": "Cumulative Return",
+          "Value": f"{summary['Cumulative Return'] * 100:.2f}%",
+      },
+      {
+          "Category": "Returns",
+          "Metric": "CAGR",
+          "Value": f"{summary['CAGR'] * 100:.2f}%",
+      },
+      {
+          "Category": "Risk-Adjusted",
+          "Metric": "Sharpe Ratio",
+          "Value": f"{summary['Sharpe Ratio']:.2f}",
+      },
+      {
+          "Category": "Risk-Adjusted",
+          "Metric": "Sortino Ratio",
+          "Value": f"{summary['Sortino Ratio']:.2f}",
+      },
+      {
+          "Category": "Risk-Adjusted",
+          "Metric": "Calmar Ratio",
+          "Value": f"{summary['Calmar Ratio']:.2f}",
+      },
+      {
+          "Category": "Risk",
+          "Metric": "Max Drawdown",
+          "Value": f"{summary['Max Drawdown'] * 100:.2f}%",
+      },
+      {
+          "Category": "Risk",
+          "Metric": "Annual Volatility",
+          "Value": f"{summary['Annual Volatility'] * 100:.2f}%",
+      },
+      {
+          "Category": "Risk",
+          "Metric": "Downside Volatility",
+          "Value": f"{summary['Downside Volatility'] * 100:.2f}%",
+      },
+      {
+          "Category": "Tail Risk",
+          "Metric": "Daily VaR (95%)",
+          "Value": f"{summary['Daily VaR (95%)'] * 100:.2f}%",
+      },
+      {
+          "Category": "Tail Risk",
+          "Metric": "Daily CVaR (95%)",
+          "Value": f"{summary['Daily CVaR (95%)'] * 100:.2f}%",
+      },
+  ]
+
+  if enable_benchmark and bench_returns is not None:
+    export_rows.extend([
+        {
+            "Category": "Benchmark-Relative",
+            "Metric": f"Beta ({benchmark_choice})",
+            "Value": f"{beta_val:.2f}",
+        },
+        {
+            "Category": "Benchmark-Relative",
+            "Metric": f"Alpha ({benchmark_choice})",
+            "Value": f"{alpha_val * 100:.2f}%",
+        },
+        {
+            "Category": "Benchmark-Relative",
+            "Metric": f"Tracking Error ({benchmark_choice})",
+            "Value": f"{te_val * 100:.2f}%",
+        },
+        {
+            "Category": "Benchmark-Relative",
+            "Metric": f"Information Ratio ({benchmark_choice})",
+            "Value": f"{ir_val:.2f}",
+        },
+    ])
+
+  df_export = pd.DataFrame(export_rows)
+  pdf_data = generate_tearsheet_pdf(returns, summary, df_export)
+
+  st.download_button(
+      label="📄 Download Tearsheet PDF Report",
+      data=pdf_data,
+      file_name="Quantitative_Strategy_Tearsheet.pdf",
+      mime="application/pdf",
+  )

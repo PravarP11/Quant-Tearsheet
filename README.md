@@ -1,34 +1,40 @@
 # 📊 Quant Tearsheet
 
-A **Streamlit-powered** quantitative strategy tearsheet that transforms raw NAV/price data into a professional-grade performance dashboard — complete with risk analytics, benchmark comparison, and interactive visualizations.
+A **Streamlit-powered** quantitative strategy tearsheet that transforms raw NAV/price time series into a professional-grade performance dashboard — complete with risk analytics, benchmark comparison, interactive visualizations, and exportable PDF report generation.
 
 ---
 
-##  Features
+## 🚀 Features
 
 | Category | What You Get |
 |---|---|
-| **Data Input** | Paste raw CSV directly or upload a `.csv` file |
-| **Return Engine** | Log-return calculation from daily NAV/price series |
-| **KPI Dashboard** | Cumulative Return, CAGR, Sharpe, Sortino, Max Drawdown, Calmar |
-| **Benchmark Comparison** | Live comparison against **Nifty 50** or **Sensex** via Yahoo Finance |
+| **Data Ingestion** | Paste raw CSV directly or upload a `.csv` file with automatic deduplication & daily resampling handling |
+| **Return Engine** | Log-return calculation from daily NAV/price series ($\ln(P_t) - \ln(P_{t-1})$) |
+| **KPI Dashboard** | Cumulative Return, CAGR, Sharpe Ratio, Sortino Ratio, Max Drawdown, Calmar Ratio |
+| **Multi-Asset Benchmarks** | Live benchmark comparison against **Nifty 50**, **Sensex**, **Bitcoin**, **Ethereum**, or **Nasdaq Crypto Index** via Yahoo Finance with 6h caching |
 | **Relative Metrics** | Beta, Jensen's Alpha, Tracking Error, Information Ratio |
-| **Risk Analytics** | Annualized Volatility, Downside Volatility, VaR (95%), CVaR / Expected Shortfall (95%) |
-| **Interactive Charts** | Cumulative Wealth Growth, Underwater Drawdown Curve, Return Distribution with VaR overlay |
+| **Risk & Tail Risk** | Annualized Volatility, Downside Volatility (MAR = 0), Historical Daily VaR (95%), Daily CVaR / Expected Shortfall (95%) |
+| **Interactive Charts** | Plotly charts with range sliders, time-selectors (1m, 3m, 6m, YTD, 1y, All), panning/zooming, and dark mode |
+| **📄 PDF Tearsheet Export** | One-click export to a styled PDF performance report containing embedded vector charts and metric tables |
 
 ---
 
-##  Dashboard Preview
+## 📊 Dashboard Preview
 
-Once launched, the app displays:
+Once launched, the dashboard provides:
 
-1. **Top KPI row** — key performance metrics at a glance  
-2. **Tabbed visualizations** — Cumulative Wealth · Drawdown Curve · Return Distribution  
-3. **Detailed risk table** — full breakdown with plain-English interpretations  
+1. **Header & Date Range Summary** — Auto-detects analysis period and total strategy trading days.
+2. **Top KPI Row** — Instant view of strategy performance & benchmark sensitivity (Beta/Alpha).
+3. **Tabbed Interactive Visualizations**:
+   - 📈 **Cumulative Wealth Growth** (Base 100 strategy vs benchmark overlay with time rangesliders)
+   - 📉 **Underwater Drawdown Curve** (Area-shaded historical drawdown depth)
+   - 📊 **Returns & Tail Risk** (Histogram of daily returns with 95% Historical VaR line)
+4. **Detailed Risk & Relative Summary Table** — Metrics breakdown with plain-English financial interpretations.
+5. **📥 PDF Report Generator** — Generate and download `Quantitative_Strategy_Tearsheet.pdf` on demand.
 
 ---
 
-##  Getting Started
+## 💻 Getting Started
 
 ### Prerequisites
 
@@ -52,32 +58,33 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The dashboard will open in your browser at `http://localhost:8501`.
+The dashboard will open automatically in your browser at `http://localhost:8501`.
 
 ---
 
-##  Project Structure
+## 📁 Project Structure
 
 ```
 Quant-Tearsheet/
-├── app.py              # Main Streamlit application & layout
-├── data_loader.py      # CSV parsing, log-return pipeline & benchmark fetcher
-├── metrics.py          # Performance & risk metric calculations
-├── visuals.py          # Plotly chart builders (wealth, drawdown, distribution)
+├── app.py              # Main Streamlit application, dashboard layout & export trigger
+├── data_loader.py      # Data pipeline: CSV parsing, log-return calculation & cached yfinance fetcher
+├── metrics.py          # Quantitative metric calculations (Returns, Risk, Tail Risk, Beta, Alpha, Tracking Error, IR)
+├── report_generator.py # PDF report builder using ReportLab and Matplotlib
+├── visuals.py          # Plotly interactive chart builders (Wealth Growth, Drawdown, Distribution)
 ├── requirements.txt    # Python dependencies
 ├── .gitignore
-└── README.md
+└── README.md           # Project documentation
 ```
 
 ---
 
-##  Input Format
+## 📑 Input Data Format
 
-The app expects a **two-column CSV** (with or without headers):
+The application accepts a **two-column CSV** (with or without header row):
 
 | Column 0 | Column 1 |
 |---|---|
-| Date (any parseable format) | Price / NAV |
+| Date (any standard date format) | Price / NAV |
 
 **Example:**
 
@@ -90,34 +97,37 @@ Date,NAV
 
 ---
 
-##  Metrics Reference
+## 📐 Metrics Reference
 
-| Metric | Formula / Description |
+| Metric | Description & Formula |
 |---|---|
-| **Cumulative Return** | `exp(Σ log returns) − 1` |
-| **CAGR** | `exp(mean daily log return × 252) − 1` |
-| **Sharpe Ratio** | `CAGR / Annualized Volatility` |
-| **Sortino Ratio** | `CAGR / Downside Volatility` |
-| **Max Drawdown** | Largest peak-to-trough decline in cumulative wealth |
-| **Calmar Ratio** | `CAGR / |Max Drawdown|` |
-| **VaR (95%)** | 5th percentile of daily returns (historical) |
-| **CVaR (95%)** | Mean of returns below VaR threshold |
-| **Beta** | `Cov(strategy, benchmark) / Var(benchmark)` |
-| **Jensen's Alpha** | `CAGR_strategy − β × CAGR_benchmark` (annualized) |
-| **Tracking Error** | `Std(excess returns) × √252` |
-| **Information Ratio** | `Mean(excess returns) × 252 / Tracking Error` |
+| **Cumulative Return** | Total return over entire period: $\exp(\sum r_t) - 1$ |
+| **CAGR** | Compound Annual Growth Rate: $\exp(\bar{r} \times 252) - 1$ |
+| **Annual Volatility** | Annualized standard deviation of daily log returns: $\sigma_{daily} \times \sqrt{252}$ |
+| **Downside Volatility** | Annualized downside deviation considering negative returns below MAR = 0 |
+| **Sharpe Ratio** | Risk-adjusted return: $\text{CAGR} / \text{Annual Volatility}$ |
+| **Sortino Ratio** | Downside risk-adjusted return: $\text{CAGR} / \text{Downside Volatility}$ |
+| **Max Drawdown** | Deepest peak-to-trough drop in cumulative wealth |
+| **Calmar Ratio** | Drawdown-adjusted return: $\text{CAGR} / \|\text{Max Drawdown}\|$ |
+| **Daily VaR (95%)** | Historical Value at Risk: 5th percentile of daily returns |
+| **Daily CVaR (95%)** | Expected Shortfall: mean loss on days breaching 95% VaR threshold |
+| **Beta** | Sensitivity to benchmark: $\text{Cov}(R_s, R_b) / \text{Var}(R_b)$ |
+| **Jensen's Alpha** | Annualized excess return over market sensitivity: $\text{CAGR}_s - \beta \times \text{CAGR}_b$ |
+| **Tracking Error** | Annualized standard deviation of active excess returns: $\sigma(R_s - R_b) \times \sqrt{252}$ |
+| **Information Ratio** | Active return per unit of active risk: $\text{Mean}(R_s - R_b) \times 252 / \text{Tracking Error}$ |
 
 ---
 
-##  Tech Stack
+## 🛠️ Tech Stack
 
-- **[Streamlit](https://streamlit.io/)** — interactive web UI  
-- **[Pandas](https://pandas.pydata.org/)** & **[NumPy](https://numpy.org/)** — data wrangling & numerics  
-- **[Plotly](https://plotly.com/python/)** — interactive charting  
-- **[yfinance](https://github.com/ranaroussi/yfinance)** — benchmark data from Yahoo Finance  
+- **[Streamlit](https://streamlit.io/)** — Web application UI
+- **[Pandas](https://pandas.pydata.org/) & [NumPy](https://numpy.org/)** — Financial data processing & mathematical calculations
+- **[Plotly](https://plotly.com/python/)** — Interactive financial charts & time controls
+- **[yfinance](https://github.com/ranaroussi/yfinance)** — Historical market benchmark data API
+- **[ReportLab](https://www.reportlab.com/) & [Matplotlib](https://matplotlib.org/)** — Automated PDF tearsheet document generation
 
 ---
 
-##  License
+## 📜 License
 
-This project is open-source and available under the [MIT License](LICENSE).
+This project is open-source under the [MIT License](LICENSE).
